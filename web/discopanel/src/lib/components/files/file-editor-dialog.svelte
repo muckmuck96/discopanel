@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
 	import { Dialog as DialogPrimitive } from "bits-ui";
 	import { Button } from '$lib/components/ui/button';
@@ -15,9 +14,9 @@
 	import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 
 	// Configure Monaco Environment only once globally
-	if (!(self as any).MonacoEnvironment) {
-		(self as any).MonacoEnvironment = {
-			getWorker(_: any, label: string) {
+	if (!(self).MonacoEnvironment) {
+		(self).MonacoEnvironment = {
+			getWorker(_, label: string) {
 				if (label === 'json') {
 					return new jsonWorker();
 				}
@@ -55,6 +54,7 @@
 	let editor = $state<monaco.editor.IStandaloneCodeEditor | null>(null);
 	let loadedFilePath = $state<string | null>(null);
 	let resizeObserver = $state<ResizeObserver | null>(null);
+	let contentLoaded = $state(false);
 
 	// Load file content when dialog opens
 	$effect(() => {
@@ -71,6 +71,7 @@
 			originalContent = '';
 			isFullscreen = false;
 			loadedFilePath = null;
+			contentLoaded = false;
 			if (editor) {
 				editor.dispose();
 				editor = null;
@@ -84,7 +85,7 @@
 
 	// Create editor when content is loaded
 	$effect(() => {
-		if (open && editorContainer && content !== '' && !editor && !loading) {
+		if (open && editorContainer && contentLoaded && !editor && !loading) {
 			createEditor();
 		}
 	});
@@ -110,7 +111,8 @@
 			const text = new TextDecoder().decode(response.content);
 			content = text;
 			originalContent = text;
-		} catch (error) {
+			contentLoaded = true;
+		} catch {
 			toast.error('Failed to load file content');
 			onClose();
 		} finally {
@@ -131,7 +133,7 @@
 			toast.success('File saved successfully');
 			originalContent = content;
 			onSave?.();
-		} catch (error) {
+		} catch {
 			toast.error('Failed to save file');
 		} finally {
 			saving = false;
